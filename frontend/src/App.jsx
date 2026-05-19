@@ -45,7 +45,7 @@ function App() {
 
   // UI States
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('available');
   const [filterMatchOnly, setFilterMatchOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
