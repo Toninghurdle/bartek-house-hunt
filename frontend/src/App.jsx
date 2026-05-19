@@ -501,6 +501,7 @@ function App() {
                   {prop.image_paths && prop.image_paths.length > 0 ? (
                     <>
                       <img 
+                        key={prop.image_paths[activeImageIndices[prop.id] || 0]}
                         src={`${API_BASE}${prop.image_paths[activeImageIndices[prop.id] || 0]}`} 
                         alt="Property" 
                         className="listing-image"
