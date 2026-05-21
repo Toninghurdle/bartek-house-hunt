@@ -4,3 +4,5 @@ node_modules/
 backend/listings.db
 backend/uploads/
 frontend/dist/
+.vercel
+.env*.local
