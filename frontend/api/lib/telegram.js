@@ -208,35 +208,54 @@ export async function syncHistoryStateless() {
     const entity = await client.getInputEntity(targetChatId);
     const thirtyDaysAgo = Date.now() / 1000 - 30 * 24 * 60 * 60;
     
+    const lastSyncIdStr = await getSetting('last_synced_msg_id');
+    const lastSyncId = lastSyncIdStr ? parseInt(lastSyncIdStr, 10) : 0;
+    
     let allMessages = [];
     let offsetId = 0;
     let reachedLimit = false;
 
-    while (!reachedLimit && allMessages.length < 1500) {
-      const batch = await client.getMessages(entity, { limit: 100, offsetId });
+    // Fetch up to 100 recent messages to find new ones
+    while (!reachedLimit && allMessages.length < 100) {
+      const batch = await client.getMessages(entity, { limit: 50, offsetId });
       if (!batch || batch.length === 0) break;
 
       for (const msg of batch) {
-        if (msg.date < thirtyDaysAgo) {
+        if (msg.date < thirtyDaysAgo || (lastSyncId > 0 && msg.id <= lastSyncId)) {
           reachedLimit = true;
           break;
         }
         allMessages.push(msg);
       }
       offsetId = batch[batch.length - 1].id;
-      if (batch.length < 100) break;
+      if (batch.length < 50) break;
     }
 
-    console.log(`Stateless Sync: Fetched ${allMessages.length} messages. Processing...`);
+    // Sort ascending to process oldest first
+    allMessages.sort((a, b) => a.id - b.id);
+
+    console.log(`Stateless Sync: Fetched ${allMessages.length} new messages. Processing...`);
 
     let processedCount = 0;
-    for (const message of allMessages) {
+    let highestProcessedId = lastSyncId;
+    
+    // Limit to 15 to stay within Vercel's 10s Serverless timeout
+    const batchToProcess = allMessages.slice(0, 15);
+
+    for (const message of batchToProcess) {
       await processTelegramMessage(client, message);
+      if (message.id > highestProcessedId) {
+        highestProcessedId = message.id;
+      }
       processedCount++;
     }
 
+    if (highestProcessedId > lastSyncId) {
+      await setSetting('last_synced_msg_id', highestProcessedId.toString());
+    }
+
     await client.disconnect();
-    return { success: true, count: processedCount };
+    return { success: true, count: processedCount, pending: allMessages.length - processedCount };
 
   } catch (e) {
     console.error('Error during stateless sync:', e);

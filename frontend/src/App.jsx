@@ -211,14 +211,22 @@ function App() {
   const handleSyncHistory = async () => {
     setSyncing(true);
     try {
-      await fetch(`${API_BASE}/api/sync`, {
+      const res = await fetch(`${API_BASE}/api/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ days: 30 })
       });
+      if (!res.ok) {
+        console.error('Sync failed with status:', res.status);
+        alert(`Sync encountered an issue (Status: ${res.status}). It might have timed out. Please try again to process the next batch.`);
+      } else {
+        const data = await res.json();
+        console.log(`Sync complete. Processed ${data.processed} messages.`);
+      }
       fetchData();
     } catch (e) {
       console.error('Sync failed', e);
+      alert('Network error during sync. Please check your connection.');
     } finally {
       setSyncing(false);
     }
