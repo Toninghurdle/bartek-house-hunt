@@ -239,8 +239,8 @@ export async function syncHistoryStateless() {
     let processedCount = 0;
     let highestProcessedId = lastSyncId;
     
-    // Limit to 15 to stay within Vercel's 10s Serverless timeout
-    const batchToProcess = allMessages.slice(0, 15);
+    // Limit to 5 to stay well within Vercel's 10s Serverless timeout
+    const batchToProcess = allMessages.slice(0, 5);
 
     for (const message of batchToProcess) {
       await processTelegramMessage(client, message);

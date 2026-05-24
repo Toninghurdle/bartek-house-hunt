@@ -218,7 +218,12 @@ function App() {
       });
       if (!res.ok) {
         console.error('Sync failed with status:', res.status);
-        alert(`Sync encountered an issue (Status: ${res.status}). It might have timed out. Please try again to process the next batch.`);
+        let errorMsg = 'Unknown error';
+        try {
+          const errData = await res.json();
+          errorMsg = errData.error || errorMsg;
+        } catch (e) {}
+        alert(`Sync encountered an issue (Status: ${res.status}).\nError: ${errorMsg}\n\nPlease try again to process the next batch.`);
       } else {
         const data = await res.json();
         console.log(`Sync complete. Processed ${data.processed} messages.`);
@@ -226,7 +231,7 @@ function App() {
       fetchData();
     } catch (e) {
       console.error('Sync failed', e);
-      alert('Network error during sync. Please check your connection.');
+      alert(`Network error during sync. Please check your connection. Details: ${e.message}`);
     } finally {
       setSyncing(false);
     }
