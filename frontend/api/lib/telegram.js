@@ -253,10 +253,15 @@ export async function syncHistoryStateless() {
     let processedCount = 0;
     let highestProcessedId = lastSyncId;
     
-    // Limit to 5 to stay well within Vercel's 10s Serverless timeout
-    const batchToProcess = allMessages.slice(0, 5);
+    const startTime = Date.now();
+    const MAX_EXECUTION_TIME = 7500; // 7.5 seconds to stay safely under Vercel's 10s limit
 
-    for (const message of batchToProcess) {
+    for (const message of allMessages) {
+      if (Date.now() - startTime > MAX_EXECUTION_TIME) {
+        console.log(`Execution time limit reached. Stopping after ${processedCount} messages.`);
+        break;
+      }
+      
       await processTelegramMessage(client, message);
       if (message.id > highestProcessedId) {
         highestProcessedId = message.id;
