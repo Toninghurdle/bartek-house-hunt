@@ -221,9 +221,15 @@ function App() {
         let errorMsg = 'Unknown error';
         let errorCode = 'ERR_UNKNOWN';
         try {
-          const errData = await res.json();
-          errorMsg = errData.error || errorMsg;
-          errorCode = errData.errorCode || errorCode;
+          const text = await res.text();
+          try {
+            const errData = JSON.parse(text);
+            errorMsg = errData.error || errorMsg;
+            errorCode = errData.errorCode || errorCode;
+          } catch (e) {
+            errorMsg = text.substring(0, 100) + '...';
+            errorCode = 'ERR_RAW_HTML';
+          }
         } catch (e) {}
         alert(`Sync encountered an issue.\n\nCode: ${errorCode}\nStatus: ${res.status}\nDetails: ${errorMsg}\n\nPlease try again to process the next batch.`);
       } else {
