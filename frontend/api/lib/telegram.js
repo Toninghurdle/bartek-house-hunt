@@ -6,6 +6,18 @@ import { parsePropertyMessage } from './gemini.js';
 async function downloadMessageMediaToSupabase(client, message) {
   if (!message.media) return null;
 
+  // Only attempt to download photos/images to avoid Vercel OOM or Timeout on large videos
+  let isImage = false;
+  if (message.photo) isImage = true;
+  else if (message.document && message.document.mimeType && message.document.mimeType.startsWith('image/')) {
+    isImage = true;
+  }
+  
+  if (!isImage) {
+    console.log(`Skipping non-image media for message ${message.id}`);
+    return null;
+  }
+
   try {
     const buffer = await client.downloadMedia(message);
     if (!buffer) return null;
