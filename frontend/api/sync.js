@@ -6,7 +6,7 @@ export default async function handler(req, res) {
       
       const result = await syncHistoryStateless();
       if (result.success) {
-        return res.status(200).json({ success: true, processed: result.count });
+        return res.status(200).json({ success: true, processed: result.count, pending: result.pending });
       } else {
         return res.status(500).json({ error: result.error, errorCode: result.errorCode || 'ERR_INTERNAL' });
       }

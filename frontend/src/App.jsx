@@ -208,33 +208,51 @@ function App() {
 
   // Sync History
   const [syncing, setSyncing] = useState(false);
+  const [syncProgressText, setSyncProgressText] = useState('');
+
   const handleSyncHistory = async () => {
     setSyncing(true);
+    setSyncProgressText('Syncing batch...');
+    
+    let isPending = true;
+
     try {
-      const res = await fetch(`${API_BASE}/api/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ days: 30 })
-      });
-      if (!res.ok) {
-        console.error('Sync failed with status:', res.status);
-        let errorMsg = 'Unknown error';
-        let errorCode = 'ERR_UNKNOWN';
-        try {
-          const text = await res.text();
+      while (isPending) {
+        const res = await fetch(`${API_BASE}/api/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ days: 30 })
+        });
+
+        if (!res.ok) {
+          console.error('Sync failed with status:', res.status);
+          let errorMsg = 'Unknown error';
+          let errorCode = 'ERR_UNKNOWN';
           try {
-            const errData = JSON.parse(text);
-            errorMsg = errData.error || errorMsg;
-            errorCode = errData.errorCode || errorCode;
-          } catch (e) {
-            errorMsg = text.substring(0, 100) + '...';
-            errorCode = 'ERR_RAW_HTML';
+            const text = await res.text();
+            try {
+              const errData = JSON.parse(text);
+              errorMsg = errData.error || errorMsg;
+              errorCode = errData.errorCode || errorCode;
+            } catch (e) {
+              errorMsg = text.substring(0, 100) + '...';
+              errorCode = 'ERR_RAW_HTML';
+            }
+          } catch (e) {}
+          alert(`Sync encountered an issue.\n\nCode: ${errorCode}\nStatus: ${res.status}\nDetails: ${errorMsg}\n\nPlease try again to process the next batch.`);
+          isPending = false;
+        } else {
+          const data = await res.json();
+          console.log(`Sync complete. Processed ${data.processed} messages. Pending: ${data.pending}`);
+          
+          if (data.pending > 0) {
+            setSyncProgressText(`Syncing... (${data.pending} msgs left)`);
+            // Briefly pause to not hammer Vercel
+            await new Promise(r => setTimeout(r, 1000));
+          } else {
+            isPending = false;
           }
-        } catch (e) {}
-        alert(`Sync encountered an issue.\n\nCode: ${errorCode}\nStatus: ${res.status}\nDetails: ${errorMsg}\n\nPlease try again to process the next batch.`);
-      } else {
-        const data = await res.json();
-        console.log(`Sync complete. Processed ${data.processed} messages.`);
+        }
       }
       fetchData();
     } catch (e) {
@@ -242,6 +260,7 @@ function App() {
       alert(`Network error during sync. Please check your connection. Details: ${e.message}`);
     } finally {
       setSyncing(false);
+      setSyncProgressText('');
     }
   };
 
@@ -313,7 +332,7 @@ function App() {
             disabled={syncing}
           >
             {syncing ? <RefreshCw className="spin" size={16} /> : <RefreshCw size={16} />}
-            {syncing ? 'Syncing...' : 'Sync History'}
+            {syncing ? (syncProgressText || 'Syncing...') : 'Sync History'}
           </button>
           <button className="btn-secondary" onClick={() => setShowSettingsDrawer(true)}>
             <Settings size={16} />
