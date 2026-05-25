@@ -1,10 +1,9 @@
-import { syncHistoryStateless } from './lib/telegram.js';
-
 export default async function handler(req, res) {
   if (req.method === 'POST' || req.method === 'GET') {
-    // Only allow manual sync if password is provided or authenticated
-    // In a real app we'd secure this, but for now we'll just run it.
     try {
+      // Dynamic import catches module resolution errors like ERR_MODULE_NOT_FOUND
+      const { syncHistoryStateless } = await import('./lib/telegram.js');
+      
       const result = await syncHistoryStateless();
       if (result.success) {
         return res.status(200).json({ success: true, processed: result.count });
@@ -13,7 +12,11 @@ export default async function handler(req, res) {
       }
     } catch (err) {
       console.error('Manual sync failed', err);
-      return res.status(500).json({ error: 'Internal Server Error' });
+      // Expose the actual module loading error
+      return res.status(500).json({ 
+        error: err.message || 'Internal Server Error', 
+        errorCode: err.code || 'ERR_CRASH' 
+      });
     }
   }
 
