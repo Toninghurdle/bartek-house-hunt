@@ -169,14 +169,14 @@ export async function syncHistoryStateless() {
   const sessionStr = await getSetting('telegram_session');
   if (!sessionStr) {
     console.error('No telegram session found. Sync aborted.');
-    return { success: false, error: 'No session' };
+    return { success: false, error: 'No session', errorCode: 'ERR_NO_SESSION' };
   }
 
   const apiIdStr = process.env.TELEGRAM_API_ID;
   const apiHash = process.env.TELEGRAM_API_HASH;
 
   if (!apiIdStr || !apiHash) {
-    return { success: false, error: 'Missing Telegram API credentials' };
+    return { success: false, error: 'Missing Telegram API credentials', errorCode: 'ERR_MISSING_CREDS' };
   }
 
   const client = new TelegramClient(new StringSession(sessionStr), parseInt(apiIdStr), apiHash, {
@@ -202,7 +202,9 @@ export async function syncHistoryStateless() {
     }
 
     if (!targetChatId) {
-      throw new Error('Target group chat not found.');
+      const err = new Error('Target group chat not found.');
+      err.code = 'ERR_CHAT_NOT_FOUND';
+      throw err;
     }
 
     const entity = await client.getInputEntity(targetChatId);
@@ -260,6 +262,12 @@ export async function syncHistoryStateless() {
   } catch (e) {
     console.error('Error during stateless sync:', e);
     try { await client.disconnect(); } catch (err) {}
-    return { success: false, error: e.message };
+    
+    let errorCode = e.code || 'ERR_UNKNOWN';
+    if (e.message && e.message.includes('FloodWait')) errorCode = 'ERR_RATE_LIMIT';
+    else if (e.message && e.message.includes('TIMEOUT')) errorCode = 'ERR_TIMEOUT';
+    else if (e.message && e.message.includes('session')) errorCode = 'ERR_SESSION_INVALID';
+    
+    return { success: false, error: e.message, errorCode };
   }
 }

@@ -9,7 +9,7 @@ export default async function handler(req, res) {
       if (result.success) {
         return res.status(200).json({ success: true, processed: result.count });
       } else {
-        return res.status(500).json({ error: result.error });
+        return res.status(500).json({ error: result.error, errorCode: result.errorCode || 'ERR_INTERNAL' });
       }
     } catch (err) {
       console.error('Manual sync failed', err);

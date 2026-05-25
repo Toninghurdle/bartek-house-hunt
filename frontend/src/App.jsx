@@ -219,11 +219,13 @@ function App() {
       if (!res.ok) {
         console.error('Sync failed with status:', res.status);
         let errorMsg = 'Unknown error';
+        let errorCode = 'ERR_UNKNOWN';
         try {
           const errData = await res.json();
           errorMsg = errData.error || errorMsg;
+          errorCode = errData.errorCode || errorCode;
         } catch (e) {}
-        alert(`Sync encountered an issue (Status: ${res.status}).\nError: ${errorMsg}\n\nPlease try again to process the next batch.`);
+        alert(`Sync encountered an issue.\n\nCode: ${errorCode}\nStatus: ${res.status}\nDetails: ${errorMsg}\n\nPlease try again to process the next batch.`);
       } else {
         const data = await res.json();
         console.log(`Sync complete. Processed ${data.processed} messages.`);
